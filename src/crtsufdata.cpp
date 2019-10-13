@@ -186,15 +186,21 @@ bool CrtSurfFile(const char *outpath)
   CFile File;
   char strFileName[301];
   char strLocalTime[21];
+  
+
+  char strFileNameTMP[301];
 
   memset(strFileName,0,sizeof(strFileName));
  
   LocalTime(strLocalTime,"yyyymmddhhmiss");
-  SNPRINTF(strFileName,300,"%s/SURF_ZH_%s_%d.txt",outpath,strLocalTime,getpid()); 
+
   
-  if (File.OpenForWrite(strFileName,"w")==false)
+  SNPRINTF(strFileName,300,"%s/SURF_ZH_%s_%d.txt",outpath,strLocalTime,getpid()); 
+  SNPRINTF(strFileNameTMP,300,"%s/SURF_ZH_%s_%d.txt.tmp",outpath,strLocalTime,getpid()); 
+  
+  if (File.OpenForRename(strFileName,"w")==false)
   {
-    printf("File.Open(%s)failed！\n",strFileName);  return false;
+    logfile.Write("File.Open(%s)failed！\n",strFileName);  return false;
   }
 
   for (int ii=0;ii<vsurfdata.size();ii++)
@@ -207,9 +213,11 @@ bool CrtSurfFile(const char *outpath)
                   vsurfdata[ii].vis/10.0);
   }
 
+   
+  File.CloseAndRename();  //关闭文件 
+
   logfile.Write("生成数据文件（%s）成功，数据时间=%s.,记录数=%d!\n\n",strFileName,vsurfdata[0].ddatetime,vsurfdata.size());
 
-  //File.CloseOnly();  //关闭文件 
   return true;
 }
 

@@ -2028,7 +2028,7 @@ bool CFile::OpenForRename(const char *filename,const char *openmode,BOOL bEnBuff
   if ( (strcmp(openmode,"r")==0) || (strcmp(openmode,"rt")==0) || (strcmp(openmode,"rb")==0) ) return false;
 
   strncpy(m_filename,filename,300);
-  snprintf(m_filenametmp,300,"%s.tmp",filename);
+  SNPRINTF(m_filenametmp,300,"%s.tmp",filename);
 
   if ( (m_fp = FOPEN(m_filenametmp, openmode )) == NULL ) return false;
 
