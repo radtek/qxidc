@@ -1,5 +1,31 @@
 
 #include "_public.h"
+/**
+ * 作者：朱振兴
+ * 框架结构：
+      XML：
+      简单XML格式文件的加载和XML字符串操作，用于参数配置文件和XML字符串的解析
+      日期和时间：
+      获取操作系统的时间，时间运算和精确到微秒的计时器。
+      字符串和数字：
+      字符串的格式化、删除空格、替换、大小写转换、正则表达式、拆分、数字读取。
+      日志文件：
+      日志文件的创建和备份，日志内容的格式化写入。
+      目录操作：
+      目录的创建，目录及各级子目录文件名的读取，排序。
+      文件操作：
+      文件的创建，内容的读取和格式化写入，文件的删除和缓冲式命名方法。
+      TCP/IP通讯：
+      TCP/IP通讯的客户端和服务端
+      FTP客户端：
+      采用ftp协议，实现文件的收发以及其他ftp客户端的全部功能
+      数据库驱动：
+      实现了数据库连接池和SQL语句操作两大功能，支持oracle、MySQL,简单易用、充分利用c语言的指针优势。
+
+      部分函数重载了库函数
+ */
+
+
 
 // 操作XMLBuffer的函数
 // in_XMLBuffer，XML格式的字符串
@@ -587,9 +613,22 @@ bool CLogFile::BackupLogFile()
 
   if (m_tracefp == 0) return true;
 
+/*
+int fseek(FILE *stream, long int offset, int whence)
+参数
+stream -- 这是指向 FILE 对象的指针，该 FILE 对象标识了流。
+offset -- 这是相对 whence 的偏移量，以字节为单位。
+whence -- 这是表示开始添加偏移 offset 的位置。它一般指定为下列常量之一：
+ */
   fseek(m_tracefp,0L,2); 
-
-  if (ftell(m_tracefp) > 100*1024*1024) 
+/*
+long int ftell(FILE *stream)
+参数
+stream -- 这是指向 FILE 对象的指针，该 FILE 对象标识了流。
+返回值
+该函数返回位置标识符的当前值。如果发生错误，则返回 -1L，全局变量 errno 被设置为一个正值。
+ */
+  if (ftell(m_tracefp) > 1*1024*1024) 
   {
     fclose(m_tracefp); m_tracefp=0;
 
@@ -2095,8 +2134,6 @@ FILE *FOPEN(const char *filename,const char *mode)
   return fopen(filename,mode);
 }
 
-
-
 // 用某文件或目录的全路径中的目录创建目录，以级该目录下的各级子目录
 bool MKDIR(const char *filename,BOOL bisfilename)
 {
@@ -2210,8 +2247,9 @@ char *STRNCAT(char* dest,size_t destlen,const char *src,size_t n)
   return dest;
 }
 
+
 int SNPRINTF(char *str,size_t size,const char *fmt,...)
-{
+{ 
   memset(str,0,size+1);
   
   va_list arg;

@@ -1,9 +1,6 @@
 
 #include "_public.h"
 
-
-
-
 //全国气象站点数据结构
 //北京,54406,延庆,40.27,115.58,487.9
 
@@ -37,9 +34,7 @@ struct st_surfdata
 
 //double用整数来表达
 
-
 vector<struct st_surfdata> vsurfdata;   //存放观测数据的容器
-
 
 //加载参数文件，内容存放在 vstcode容器中
 bool LoadSTCode(const char *inifile);
@@ -66,8 +61,6 @@ int main(int argc,char *argv[])
     return -1;
   }
 
-
-
   
   //关闭全部的信号和输入输出
   // LoadSTCode(argv[1]);
@@ -75,11 +68,10 @@ int main(int argc,char *argv[])
   //
   
   //处理程序退出的信号
-
- // signal(SIGINT,EXIT);signal(SIGTERM,EXIT);
+  void EXIT(int sig);
+  signal(SIGINT,EXIT);signal(SIGTERM,EXIT);
 
   
-
   if (logfile.Open(argv[3],"a+")==false)
   {
     printf("打开日志文件失败（%s）",argv[3]);
@@ -87,19 +79,21 @@ int main(int argc,char *argv[])
   }
 
 
-  logfile.Write("打开日志文件成功（%s）\n",argv[3]);
-  
+  logfile.Write("打开日志文件成功（%s）\n\n",argv[3]);
 
   if (LoadSTCode(argv[1]) == false) return -1;
+
 
   /*
   for (int ii=0;ii<1000000;ii++)
   {
-    logfile.Write("例如：/root/qxidc/src/crtsufdata /root/qxidc/ini/stcode.ini  /root/qxidc/data/ftp/sufdata  /root/qxidc/log/crtsurfdata.log\n");
+    logfile.Write("例如：/root/qxidc/src/crtsufdata /root/qxidc/ini/stcode.ini  /root/qxidc/data/ftp/sufdata  /root/qxidc/log/crtsurfdata.log\n\n");
   }  
   */
+
   logfile.Write("加载参数文件%s成功!.\n",argv[1]);
 
+  //让程序60秒执行一次 死循环 
   while(1)
   {
     CrtSurfData();    //创建全国气象站点分钟观测数据,存放在vsurfdata容器中
@@ -181,7 +175,7 @@ void CrtSurfData()
     stsurfdata.wf = rand()%150;                   //风速：单位0.1m/s
     stsurfdata.r = rand()%16;                     //降雨量：0.1mm
     stsurfdata.vis = rand()%5001+10000;           //能见度：0.1m
-
+  
     vsurfdata.push_back(stsurfdata);
   } 
 }
@@ -213,9 +207,9 @@ bool CrtSurfFile(const char *outpath)
                   vsurfdata[ii].vis/10.0);
   }
 
-  logfile.Write("生成数据文件（%s）成功，数据时间=%s.,记录数=%d!\n",strFileName,vsurfdata[0].ddatetime,vsurfdata.size());
+  logfile.Write("生成数据文件（%s）成功，数据时间=%s.,记录数=%d!\n\n",strFileName,vsurfdata[0].ddatetime,vsurfdata.size());
 
-  //File.Close();  //关闭文件 
+  //File.CloseOnly();  //关闭文件 
   return true;
 }
 
