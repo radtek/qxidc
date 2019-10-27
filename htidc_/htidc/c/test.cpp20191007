@@ -1,0 +1,65 @@
+#include "_public.h"
+
+CFile  FileStd;
+CCmdStr CmdStr;
+
+int main()
+{
+  char strtname[9999991];
+  memset(strtname,0,sizeof(strtname));
+  strcpy(strtname,"localossmodayd,localossmomin,localossmob04,localossmob01,localossmob02,ossmocode,roadt,hyview,sbdyldata,jstqxxy,rzsuanyu,ossmoafh,ossmoafd,ossmosrprmin,ossmosrprh,ossmosrprd,autosoilu,ossmoafww,ossmoafwd,ossmoafw,ossmoafsw,ossmoafsd,ossmoafs,ossmoafyw,ossmoafyd,ossmoafy,ossmoaftw,ossmoaftd,ossmoaft,ossmoafmw,ossmoafmd,ossmoafm,localobtmind,localobtwind,localobtreald,localobthourd,localobtdayd,localawsdayd,localobtwlev,localobtcald,redundantrainfall,awsafww,awsafw,awsafws,awsafs,awsafwy,awsafy,awsafwt,awsaft,awsafwm,awsafm,obtmonlog,obtcode,zdzftplog,otherobtcald,otherobtmind,otherobtwind,otherobtreald,otherobthourd,otherobtdayd,hksurface,upperdata,vwpwdata,vwpcode,czradorgfiles,radorgfiles,metstarwindprofile,ls8000vhf,ls8000,szradfiles,szlightning,windoutlinecn2,dllightning,fy2dfiles,wolcode,windoutlinet,windoutlinew,hklightning,hkradfiles,windprofilers,gpspwv,cloudheight,cawn_obtcode,aircomposition02,aircomposition03,aircomposition04,aircomphourd,aircompdayd,airelectricfield,openflux,microradiation,microinver,climatestationadd,cawn_pmmul,wavebuoy,seastamind,seastahourd,localobtco2,localobtc,localobtgt,localobtw,localobtrad,radi_onelr_shiyan_min,radi_onelr_shiyan_hour,radi_br_shiyan_min,radi_br_shiyan_hour,radi_gr_shiyan_min,radi_gr_shiyan_hour,localobtv,comfort,radi_br_xichong_min,radi_br_xichong_hour,radi_tr_xichong_min,radi_tr_xichong_hour,radi_gr_xichong_min,radi_gr_xichong_hour,radi_lr_xichong_min,radi_lr_xichong_hour,anion,anioncode,raindrop,hktideheight,ghgdata,underlyingsurf,air_townmind,air_station,air_monitoritem,gradienttower,raindropanalysis,shipsta,redundantrainfall,tencengridinfo,tencenpopulation,cityunitdata,cityunitinfo,zhgriddata,zhgridcode,szgriddata,szgridcode,citycode,zhareacode,indexinfo,zhcitycode,zhprovcode,zhobtcode,zhalarmdata,citywf_scmoc,rffc6h,rffc_citycode,dbys_details,dbys_index,lfs_welfareforecastdays,lfs_cityweatherhour,lfs_cityweather,lfs_welfareproduce,lfs_hour12weatherhour,lfs_areaweatherhour,lfs_areaweather,lfs_welfareforecast,lfs_specialtime,signalsysinfo,lws_warntrips,gf_nhhy,citywfnew,citytype,citytypeandcode,gf_gdfx,gf_gdyh,citywf_haze,gdalarm,qxwarn,gdfpicture2,gdfpicture,all_grid_ncar_day_5km,lwscontent,dzzh_gdfpicture,sz_grid_poin5k,sz_grid_forecast,sz_grid_forecaststatus,servicetype,servicecall,tide,alarmtype,weather_entry,lws_tripsmessage,szyb_alarmtype2,lws_warnpre,zytqbdata,hkwf,hk_warn,travelinfo,attractions_forecase,seafog_forecast,maxwind_forecast,xxzx_lgzs,jkqx_zhishu,nmcsms,allawsdayd,zhaqidata,zhaqicode,zhsurfcode,allawsmind,allossmomind,allawscald,hnawsmind,hn_obtcode,typhoonname,tyaffectsz,tyforecast,tylandhis,cmasittrack,envairdata,envairdatahour,envaqisms,envcode,szoa_buoycode,szoa_buoydata,swdata,swcode,tp_pptn_sz_h,xzcf,xzxk,zwbspjgldata,zwbsbcldata,zwbbjdata,zwbsldata,zwbspcldata,zwbtbcxsqdata,zwbtbcxjgdata,zwbsbdata,zwbbzsldata,zwbbzgzdata,zwbtzsdata,zwbemsdata,zwbysdata,zwblqdjdata,tqw_zhindexdata,tqw_cairhour,tqw_intercityfore_15day,tqw_intercityobtreal,tqw_intercityfore_1hour,tqw_worldcitycode,tqw_zhcitycode,ajj_whpqy,ajj_whpjyxkz,jxw_jyzqymc,jxw_wxhxpqy,jxw_xzspsx,wtj_ggwtsb,zjj_jgysba,ferainday,tswhourd,ossmohdt,awsdift,smdb_rain50level,dwlog,vuhourd,overrain,seasondefine,warmwinter,obttyextvalue,obtrainstat,obtextvalue,rainlimit,rainfrequency,contminmaxt,szhldata,szrainfall,contr24h,maxtdays,frostdata,ossmoholidays");
+ 
+
+  CmdStr.SplitToCmd(strtname,",");
+
+  if( FileStd.OpenForWrite("/tmp/getgdobtv.sh","w+") == FALSE) printf("open failed\n");
+
+  char strLocalTime[21];
+  memset(strLocalTime,0,sizeof(strLocalTime));
+  strcpy(strLocalTime,"20181231000000");
+
+  char strBeginTime[21];
+  char strEndTime[21];
+ 
+  for (UINT ii=0;ii<CmdStr.CmdCount();ii++)
+  {
+    FileStd.Fprintf("DROP FUNCTION IF EXISTS seq_%s_currval;\n",CmdStr.m_vCmdStr[ii].c_str());
+    FileStd.Fprintf("DELIMITER $\n");
+    FileStd.Fprintf("CREATE FUNCTION seq_%s_currval()\n",CmdStr.m_vCmdStr[ii].c_str());
+    FileStd.Fprintf("RETURNS INTEGER\n");
+    FileStd.Fprintf("LANGUAGE SQL\n");
+    FileStd.Fprintf("DETERMINISTIC\n");
+    FileStd.Fprintf("CONTAINS SQL\n");
+    FileStd.Fprintf("SQL SECURITY DEFINER\n");
+    FileStd.Fprintf("COMMENT ''\n");
+    FileStd.Fprintf("BEGIN\n");
+    FileStd.Fprintf("DECLARE value INTEGER;\n");
+    FileStd.Fprintf("SET value = 0;\n");
+    FileStd.Fprintf("SELECT current_value INTO value FROM seq_microradiation; \n");
+    FileStd.Fprintf("RETURN value; \n");
+    FileStd.Fprintf("END\n");
+    FileStd.Fprintf("$\n");
+    FileStd.Fprintf("DELIMITER ;\n");
+    FileStd.Fprintf("\n");
+    FileStd.Fprintf("DROP FUNCTION IF EXISTS seq_%s_nextval;\n",CmdStr.m_vCmdStr[ii].c_str());
+    FileStd.Fprintf("delimiter //\n");
+    FileStd.Fprintf("create function seq_%s_nextval()\n",CmdStr.m_vCmdStr[ii].c_str());
+    FileStd.Fprintf("returns integer\n");
+    FileStd.Fprintf("language sql\n");
+    FileStd.Fprintf("deterministic\n");
+    FileStd.Fprintf("contains sql\n");
+    FileStd.Fprintf("sql security definer\n");
+    FileStd.Fprintf("comment ''\n");
+    FileStd.Fprintf("begin\n");
+    FileStd.Fprintf("update seq_microradiation set current_value = current_value + increment ;\n");
+    FileStd.Fprintf("return seq_microradiation_currval();\n");
+    FileStd.Fprintf("end\n");
+    FileStd.Fprintf("//\n");
+    FileStd.Fprintf("delimiter ;\n");
+    FileStd.Fprintf("\n");
+  }
+
+  FileStd.Fclose();
+
+  return 0;
+}

@@ -1,0 +1,30 @@
+#include "_public.h"
+
+CFile  FileStd;
+
+int main()
+{
+  if( FileStd.OpenForWrite("/tmp/getdata.sh","w+") == FALSE) printf("open failed\n");
+
+  char strLocalTime[21];
+  memset(strLocalTime,0,sizeof(strLocalTime));
+  strcpy(strLocalTime,"2016-12-31 00:00:00");
+
+  char strTime[21];
+ 
+  for (int ii=1; ii<7000; ii++)
+  {
+    memset(strTime,0,sizeof(strTime));
+
+    AddTime(strLocalTime,strTime,ii*60*60,"yyyy-mm-dd hh24:mi:ss");
+    strTime[13]='\0';
+
+     FileStd.Fprintf("/htidc/szqx/bin/pszhldata_quarter \"<logfilename>/log/szqx/pszhldata_quarter.log</logfilename><charset>Simplified Chinese_China.ZHS16GBK</charset><connstr>szidc/pwdidc@SZQX_10.153.98.31</connstr><ddatetime>%s</ddatetime><obtid>SZ118,LH118,FT118,NS118,YT118,BA118,LG118,LH119,PS118,GM118,DP118</obtid>\"\n",strTime);
+
+    if (strcmp(strTime,"2017-06-21 18") == 0) break;
+  }
+
+  FileStd.Fclose();
+
+  return 0;
+}

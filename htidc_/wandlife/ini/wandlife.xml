@@ -1,0 +1,29 @@
+# 数据中心核心数据库的连接串
+<idcconnstr>wandlife/pwdidc</idcconnstr>
+
+# 数据中心各数据库的用户名
+<idcusername>wandlife</idcusername>
+
+# 日志文件目录
+<logpath>/log/wandlife</logpath>
+
+# 存放二进制文档文件导出列表文件的目录
+<listpath>/qxdata/wandlife/list</listpath>
+
+# 存放临时文件的目录
+<tmppath>/qxdata/wandlife/tmp</tmppath>
+
+# 二维表格数据标准XML文件存放的目录
+<sdatastdpath>/qxdata/wandlife/sdata/std</sdatastdpath>
+# 二维表格数据标准XML文件备份的目录
+<sdatastdbakpath>/qxdata/wandlife/sdata/stdbak</sdatastdbakpath>
+# 二维表格数据标准XML文件错误文件的备份的目录
+<sdatastderrpath>/qxdata/wandlife/sdata/stderr</sdatastderrpath>
+
+# 二进制文档文件数据标准命名文件存放的目录
+<wfilestdpath>/qxdata/wandlife/wfile/std</wfilestdpath>
+# 二进制文档文件数据标准命名文件备份的目录
+<wfilestdbakpath>/qxdata/wandlife/wfile/stdbak</wfilestdbakpath>
+# 二进制文档文件数据标准命名文件备份的目录
+<wfilestderrpath>/qxdata/wandlife/wfile/stderr</wfilestderrpath>
+

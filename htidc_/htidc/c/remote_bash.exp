@@ -1,0 +1,30 @@
+#!/usr/bin/expect -f
+
+# Usage:
+#   ./remote_bash.exp [ip] [user] [passwd] "[cmd]"
+
+if { $argc != 4 } {
+  send_user "usage: $argv0 ip user passwd cmd\n"
+  exit
+}
+
+set ip [lindex $argv 0]
+set user [lindex $argv 1]
+set password [lindex $argv 2]
+set cmd [lindex $argv 3]
+set timeout 90
+
+spawn ssh $user@$ip
+
+expect {
+  "*yes/no" { send "yes\r"; exp_continue }
+  "*assword:" { send "$password\r" }
+}
+
+expect {
+"#" { send "$cmd\r" }
+"\\\$" { send "$cmd\r" }
+}
+
+send  "exit\r"
+expect eof

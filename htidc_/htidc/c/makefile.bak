@@ -1,0 +1,282 @@
+LIBDIR = .
+
+# mysql开发相关文件存放目录
+MYSQL_HOME= /htidc/mysql/64
+
+# mysql头文件存放路径
+MYSQLINCL = -I$(MYSQL_HOME)/include
+
+# mysql库文件保存路径
+MYSQLLIB = -L$(MYSQL_HOME)/lib
+
+#oracle头文件路径
+ORAINCL = -I$(ORACLE_HOME)/rdbms/public -I$(ORACLE_HOME)/rdbms/demo -I$(ORACLE_HOME)/rdbms/public -I$(ORACLE_HOME)/network/public
+
+#oracle库文件路径
+ORALIB =  -L$(ORACLE_HOME)/lib -L/htidc/htidc/c -L.
+
+ORALIBS = -lclntsh -lociht
+
+#CFLAGS = -O2
+#CFLAGS = -O2 -Wall
+
+CFLAGS = -g -Wall
+
+
+# 注意，dminingsqlserver和dminingmysql没有放在这里，因为在很多服务器上没有编译环境
+# 如有需要，请手工make dminingsqlserver dminingmysql
+all:	libftp.a libociht.a procctl dbcp checkprogram deletefiles deletearchive gzipfiles synctable\
+	tablecp1 tablecp2 tableupt cpdb managedict dfiletodb diskstat rinetd wfiletodb\
+        backupdbuser backupapp ftpputfiles ftpgetfiles dminingoracle dminingtxt\
+	uptdata backuptables counttable managesynonym crtview managetable bissuedata manageview\
+	gettabdata instabdata crttable cpustat dbfilestat sessionstat alarmtotab migratetable\
+        fileclient fileserver drawcontour drawwind
+
+install:
+	rm -rf /htidc/htidc/bin
+	mkdir  /htidc/htidc/bin
+	cd /htidc/freetds-0.82
+	./configure --prefix=/usr/local/freetds --with-tdsver=8.0 --enable-msdblib
+	make
+	make install
+
+libftp.a: ftplib.c
+	cc -c -o libftp.a ftplib.c
+
+libociht.a: _oracle.h _oracle.cpp
+	g++ $(CFLAGS) -o libociht.a -c _oracle.cpp $(ORAINCL)
+
+fileclient: fileclient.cpp
+	g++ $(CFLAGS) -o fileclient fileclient.cpp /htidc/htidc/c/_public.cpp \
+	-I/htidc/htidc/c -L. -lm -lc
+	cp -f fileclient ../bin/.
+
+fileserver: fileserver.cpp
+	g++ $(CFLAGS) -o fileserver fileserver.cpp /htidc/htidc/c/_public.cpp \
+	-I/htidc/htidc/c -L. -lm -lc
+	cp -f fileserver ../bin/.
+
+
+procctl: procctl.cpp
+	g++ $(CFLAGS) -o procctl procctl.cpp -lm -lc
+	cp -f procctl ../bin/.
+
+dbcp: dbcp.cpp _public.h _public.cpp 
+	g++ $(CFLAGS) -o dbcp dbcp.cpp _public.cpp $(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f dbcp ../bin/.
+
+cpdb: cpdb.cpp _public.h _public.cpp 
+	g++ $(CFLAGS) -o cpdb cpdb.cpp _public.cpp $(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f cpdb ../bin/.
+
+checkprogram: checkprogram.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o checkprogram checkprogram.cpp _public.cpp -lm -lc
+	cp -f checkprogram ../bin/.
+
+deletefiles: deletefiles.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o deletefiles deletefiles.cpp _public.cpp -lm -lc
+	cp -f deletefiles ../bin/.
+
+splitfile: splitfile.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o splitfile splitfile.cpp _public.cpp -lm -lc
+	cp -f splitfile ../bin/.
+
+mergefile: mergefile.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o mergefile mergefile.cpp _public.cpp -lm -lc
+	cp -f mergefile ../bin/.
+
+deletearchive: deletearchive.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o deletearchive deletearchive.cpp _public.cpp -lm -lc
+	cp -f deletearchive ../bin/.
+
+gzipfiles: gzipfiles.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o gzipfiles gzipfiles.cpp _public.cpp -lm -lc
+	cp -f gzipfiles ../bin/.
+
+synctable: synctable.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o synctable synctable.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f synctable ../bin/.
+
+tablecp1: tablecp1.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o tablecp1 tablecp1.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f tablecp1 ../bin/.
+
+tablecp2: tablecp2.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o tablecp2 tablecp2.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f tablecp2 ../bin/.
+
+tableupt: tableupt.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o tableupt tableupt.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f tableupt ../bin/.
+
+managedict: managedict.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o managedict managedict.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f managedict ../bin/.
+
+ftpserver: ftpserver.cpp _public.h _public.cpp idcapp.h idcapp.cpp _ftp.h _ftp.cpp
+	g++ $(CFLAGS) -o ftpserver ftpserver.cpp _public.cpp idcapp.cpp _ftp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f ftpserver ../bin/.
+
+ftpputfiles: ftpputfiles.cpp _public.h _public.cpp ftp.h ftp.cpp
+	g++ $(CFLAGS) -o ftpputfiles ftpputfiles.cpp _public.cpp ftp.cpp libftp.a -lm -lc
+	cp -f ftpputfiles ../bin/.
+
+ftpgetfiles: ftpgetfiles.cpp _public.h _public.cpp ftp.h ftp.cpp
+	g++ $(CFLAGS) -o ftpgetfiles ftpgetfiles.cpp _public.cpp ftp.cpp libftp.a -lm -lc
+	cp -f ftpgetfiles ../bin/.
+
+dfiletodb: dfiletodb.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o dfiletodb dfiletodb.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f dfiletodb ../bin/.
+
+wfiletodb: wfiletodb.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o wfiletodb wfiletodb.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f wfiletodb ../bin/.
+
+dminingoracle: dminingoracle.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o dminingoracle dminingoracle.cpp _public.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f dminingoracle ../bin/.
+
+dminingsqlserver: dminingsqlserver.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o dminingsqlserver dminingsqlserver.cpp _public.cpp \
+	/usr/local/freetds/lib/libsybdb.so.5.0.0 -lm -lc
+	cp -f dminingsqlserver ../bin/.
+
+dminingtxt: dminingtxt.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o dminingtxt dminingtxt.cpp _public.cpp -lm -lc
+	cp -f dminingtxt ../bin/.
+
+cpustat: cpustat.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o cpustat cpustat.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f cpustat ../bin/.
+
+dbfilestat: dbfilestat.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o dbfilestat dbfilestat.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f dbfilestat ../bin/.
+
+sessionstat: sessionstat.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o sessionstat sessionstat.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f sessionstat ../bin/.
+
+alarmtotab: alarmtotab.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o alarmtotab alarmtotab.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f alarmtotab ../bin/.
+
+diskstat: diskstat.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o diskstat diskstat.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f diskstat ../bin/.
+
+backupdbuser: backupdbuser.cpp   _public.h _public.cpp
+	g++ $(CFLAGS) -o backupdbuser backupdbuser.cpp  _public.cpp -L. -lm -lc
+	cp -f backupdbuser ../bin/.
+
+backupapp: backupapp.cpp   _public.h _public.cpp
+	g++ $(CFLAGS) -o backupapp backupapp.cpp  _public.cpp -L. -lm -lc
+	cp -f backupapp ../bin/.
+
+uptdata: uptdata.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o uptdata uptdata.cpp _public.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f uptdata ../bin/.
+
+rinetd: rinetd.cpp
+	gcc -O2 -Wall -o rinetd rinetd.cpp -L. -lstdc++ -lm -lc
+	cp -f rinetd ../bin/.
+
+backuptables: backuptables.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o backuptables backuptables.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f backuptables ../bin/.
+
+counttable: counttable.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o counttable counttable.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f counttable ../bin/.
+
+managesynonym: managesynonym.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o managesynonym managesynonym.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f managesynonym ../bin/.
+
+crttable: crttable.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o crttable crttable.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f crttable ../bin/.
+
+crtview: crtview.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o crtview crtview.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f crtview ../bin/.
+
+managetable: managetable.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o managetable managetable.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f managetable ../bin/.
+
+crtsequence: crtsequence.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o crtsequence crtsequence.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f crtsequence ../bin/.
+
+bissuedata: bissuedata.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o bissuedata bissuedata.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f bissuedata ../bin/.
+
+gettabdata: gettabdata.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o gettabdata gettabdata.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f gettabdata ../bin/.
+
+instabdata: instabdata.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o instabdata instabdata.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f instabdata ../bin/.
+
+manageview: manageview.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o manageview manageview.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f manageview ../bin/.
+
+migratetable: migratetable.cpp _public.h _public.cpp idcapp.h idcapp.cpp
+	g++ $(CFLAGS) -o migratetable migratetable.cpp _public.cpp idcapp.cpp \
+	$(ORAINCL) $(ORALIB) $(ORALIBS) -lm -lc
+	cp -f migratetable ../bin/.
+
+dminingmysql: dminingmysql.cpp /htidc/htidc/c/_public.cpp /htidc/htidc/c/_public.h
+	g++ $(CFLAGS) -o dminingmysql dminingmysql.cpp /htidc/htidc/c/_public.cpp $(MYSQLINCL) $(MYSQLLIB) \
+	$(PUBLIC) -lmysqlclient
+	cp -f dminingmysql /htidc/htidc/bin
+
+drawcontour: drawcontour.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o drawcontour drawcontour.cpp _public.cpp -lm -lc
+	cp -f drawcontour ../bin/.
+
+drawwind: drawwind.cpp _public.h _public.cpp
+	g++ $(CFLAGS) -o drawwind drawwind.cpp _public.cpp -lm -lc
+	cp -f drawwind ../bin/.
+
+
+clean:
+	rm -f *.o *.a 
+	rm -rf libftp.a libociht.a procctl dbcp checkprogram deletefiles deletearchive gzipfiles synctable\
+	rm -rf tablecp1 tablecp2 tableupt cpdb managedict dfiletodb diskstat rinetd wfiletodb\
+	rm -rf backupdbuser backupapp ftpputfiles ftpgetfiles dminingoracle dminingtxt\
+	rm -rf uptdata backuptables counttable managesynonym crtview managetable bissuedata manageview\
+	rm -rf gettabdata instabdata crttable cpustat dbfilestat sessionstat alarmtotab migratetable\
+	rm -rf fileclient fileserver drawcontour drawwind
+	rm -rf dminingsqlserver dminingmysql

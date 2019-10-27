@@ -1,0 +1,194 @@
+#include "_public.h"
+#include "_oracle.h"
+
+void EXIT(int sig);
+
+CLogFile       logfile;
+connection     conn;
+CProgramActive ProgramActive;
+
+char strstdname[31]; 
+char strlogfilename[301]; 
+char stroutputpath[301]; 
+char strpathname[301];
+char strandchild[10];
+char strmatchstr[101];
+char strtype[301];
+char strtimesql[301];
+char strconnstr[101];
+int  itimetvl;
+int  umtime;
+
+int main(int argc,char *argv[])
+{
+  if (argc != 2)
+  {
+    printf("\n");
+    printf("Using:./fileinfo xmlbuffer\n");
+
+    printf("Example:/htidc/htidc/bin/procctl 120 /htidc/htidc/bin/getfileinfo \"<logfilename>/tmp/htidc/log/getfileinfo.log</logfilename><connstr>szidc/pwdidc@SZQX_10.153.98.31</connstr><type>radar_dpradar_gd</type><timesql>select substr(:1,16,14) from dual</timesql><stdname>UNSTRUCT_FILESINFO</stdname><outputpath>/tmp/htidc/qxmonclient</outputpath><pathname>/ecdata</pathname><andchild>TRUE</andchild><matchstr>S*</matchstr><timetvl>-8</timetvl><mtime>24</mtime>\"\n\n");
+
+    printf("用于收集指定目录下的雷达基数据文件信息，生成xml文件，然后入库。\n");
+    printf("<logfilename>/tmp/htidc/log/fileinfo_ecdata</logfilename>是本程序的日志文件名。\n");
+    printf("<connstr>szidc/pwdidc@SZQX_10.153.98.31</connstr> 数据库连接参数，用于执行下面的SQL语句。\n");
+    printf("<type>radar_dpradar_gd 数据类型，采用:xx_xx_xx，广东省双偏振雷达基数据：radar_dpradar_gd 。\n");
+    printf("<timesql>select substr(:1,16,14) from dual 取数据时间SQL语句，:1代表文件名，不能为空。\n");
+    printf("<stdname>UNSTRUCT_FILESINFO</stdname> xml文件前缀\n");
+    printf("<outputpath>/tmp/htidc/qxmonclient</outputpath>xml文件输出目录。\n");
+    printf("<pathname>/ecdata</pathname>待收集文件存放的目录。\n");
+    printf("<andchild>TRUE</andchild>是否扫描子目录。\n");
+    printf("<matchstr>S1D*</matchstr>目录下文件的匹配规则。\n");
+    printf("<mtime>24</mtime> 待传输文件时间的范围，单位：小时，如果文件时间在本参数之前，就不传输。\n");
+    printf("xmlbuffer可以处理时间变量，<timetvl>-8</timetvl> 为时间变量的偏移时间。"\
+           "目前可以处理以下时间变量：{YYYY}（4位的年）、{YYY}（后三位的年）、"\
+           "{YY}（后两位的年）、{MM}（月月）、{DD}（日日）、{HH}（时时）、{MI}（分分）、{SS}（秒秒）。\n");
+    printf("以上的参数只有timetvl、mtime为可选参数，其它的都必填。\n\n\n");
+
+    return -1;
+  }
+
+  char strXmlBuffer[4001];
+  memset(strXmlBuffer,0,sizeof(strXmlBuffer));
+  strncpy(strXmlBuffer,argv[1],4000);
+
+  memset(strstdname,0,sizeof(strstdname));
+  memset(strlogfilename,0,sizeof(strlogfilename));
+  memset(stroutputpath,0,sizeof(stroutputpath));
+  memset(strpathname,0,sizeof(strpathname));
+  memset(strandchild,0,sizeof(strandchild));
+  memset(strmatchstr,0,sizeof(strmatchstr));
+  memset(strtype,0,sizeof(strtype));
+  memset(strtimesql,0,sizeof(strtimesql));
+  memset(strconnstr,0,sizeof(strconnstr));
+  itimetvl=0;
+  umtime=0;
+
+  // 处理xmlbuffer中的时间变量
+  MatchBuffer(strXmlBuffer,itimetvl);
+
+  GetXMLBuffer(strXmlBuffer,"timetvl",&itimetvl);
+  GetXMLBuffer(strXmlBuffer,"stdname",strstdname,30);
+  GetXMLBuffer(strXmlBuffer,"logfilename",strlogfilename,300);
+  GetXMLBuffer(strXmlBuffer,"outputpath",stroutputpath,300);
+  GetXMLBuffer(strXmlBuffer,"pathname",strpathname,300);
+  GetXMLBuffer(strXmlBuffer,"matchstr",strmatchstr,100);
+  GetXMLBuffer(strXmlBuffer,"andchild",strandchild,10);
+  GetXMLBuffer(strXmlBuffer,"mtime",&umtime);
+  GetXMLBuffer(strXmlBuffer,"type",strtype,300);
+  GetXMLBuffer(strXmlBuffer,"timesql",strtimesql,300);
+  GetXMLBuffer(strXmlBuffer,"connstr",strconnstr,100);
+
+  if (strlen(strstdname) == 0) { logfile.Write("stdname is null.\n"); return -1; }
+  if (strlen(strlogfilename) == 0) { logfile.Write("logfilename is null.\n"); return -1; }
+  if (strlen(stroutputpath) == 0) { logfile.Write("outputpath is null.\n"); return -1; }
+  if (strlen(strpathname) == 0) { logfile.Write("pathname is null.\n"); return -1; }
+  if (strlen(strandchild) == 0) { logfile.Write("andchild is null.\n"); return -1; }
+  if (strlen(strmatchstr) == 0) { logfile.Write("matchstr is null.\n"); return -1; }
+  if (strlen(strtimesql) == 0)  { logfile.Write("timesql is null.\n"); return -1; }
+
+  // 关闭全部的信号和输入输出
+  // 设置信号,在shell状态下可用 "kill + 进程号" 正常终止些进程
+  // 但请不要用 "kill -9 +进程号" 强行终止
+  CloseIOAndSignal(); signal(SIGINT,EXIT); signal(SIGTERM,EXIT);
+
+  if (logfile.Open(strlogfilename,"a+") == FALSE)
+  {
+    printf("logfile.Open(%s) failed.\n",strlogfilename); return -1;
+  }
+
+  //打开告警
+  logfile.SetAlarmOpt("getfileinfo");
+
+  // 程序超时是7200秒
+  ProgramActive.SetProgramInfo(&logfile,"getfileinfo",7200);
+
+  // 连接数据源数据库
+  if (conn.connecttodb(strconnstr) != 0)
+  {
+     logfile.Write("conn.connecttodb(%s) failed\n",strconnstr); EXIT(-1);
+  }
+  
+  // 写入进程活动信息
+  ProgramActive.WriteToFile();
+
+  char strmtime[21];
+  memset(strmtime,0,sizeof(strmtime));
+  LocalTime(strmtime,"yyyymmddhh24miss",0-umtime*60*60);
+
+  CDir Dir;
+
+  Dir.SetDateFMT("yyyymmddhh24miss");
+
+  // 打开目录，读取文件，不排序
+  BOOL bandchild=FALSE;
+
+  if ( (strcmp(strandchild,"TRUE")==0) || (strcmp(strandchild,"true")==0) ) bandchild=TRUE;
+
+  if (Dir.OpenDirNoSort(strpathname,bandchild) == FALSE)
+  {
+    printf("Dir.OpenDir(%s) failed.\n",strpathname); exit(-1);
+  }
+
+  char strXMLFileName[301],strLocalTime[21];
+  memset(strLocalTime,0,sizeof(strLocalTime));
+  LocalTime(strLocalTime,"yyyymmddhh24miss");
+  memset(strXMLFileName,0,sizeof(strXMLFileName));
+  snprintf(strXMLFileName,300,"%s/%s_%s_%d.xml",stroutputpath,strstdname,strLocalTime,getpid());
+
+  CFile File;
+  
+  if (File.OpenForRename(strXMLFileName,"w+")==FALSE)
+  {
+    logfile.Write("File.OpenForRename(%s) failed.\n",strXMLFileName); exit(-1);
+  }
+  
+  File.Fprintf("<data>\n");
+
+  char strddatetime[31];
+
+  sqlstatement stmt;
+  stmt.connect(&conn);
+
+  while (Dir.ReadDir() == TRUE)
+  {
+    if (MatchFileName(Dir.m_FileName,strmatchstr)==FALSE) continue;
+
+    // 如果文件时间小于umtime，就丢弃这个文件
+    if ( (umtime>0) && (strcmp(Dir.m_ModifyTime,strmtime)<0) ) continue;
+
+    memset(strddatetime,0,sizeof(strddatetime));
+
+    // 取数据时间
+    stmt.prepare(strtimesql);
+    stmt.bindin(1,Dir.m_FileName,300);
+    stmt.bindout(1,strddatetime,20);
+    if (stmt.execute() != 0)
+    {
+      logfile.Write("exec %s failed.%s\n",stmt.m_sql,stmt.cda.message); continue;
+    }
+    stmt.next();
+
+    File.Fprintf("<ddatetime>%s</ddatetime><typeid>%s</typeid><filepath>%s</filepath><filename>%s</filename><filesize>%d</filesize><endl/>\n",strddatetime,strtype,Dir.m_DirName,Dir.m_FileName,Dir.m_FileSize); 
+  }
+
+  File.Fprintf("</data>\n");
+
+  File.CloseAndRename();
+
+  logfile.Write("生成%s\n",strXMLFileName);
+
+  exit(0);
+}
+
+void EXIT(int sig)
+{
+  if (sig > 0) signal(sig,SIG_IGN);
+
+  logfile.Write("catching the signal(%d).\n",sig);
+
+  logfile.Write("fileinfo exit.\n");
+
+  exit(0);
+}
+
+

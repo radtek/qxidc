@@ -1,0 +1,31 @@
+#include "_public.h"
+
+CFile  FileStd;
+
+int main()
+{
+  if( FileStd.OpenForWrite("/tmp/22.sql","w+") == FALSE) printf("open failed\n");
+
+  char strLocalTime[21];
+  memset(strLocalTime,0,sizeof(strLocalTime));
+  strcpy(strLocalTime,"2017-08-28 00:00:00");
+
+  char strTime[21];
+ 
+  for (int ii=1; ii<70000; ii++)
+  {
+    memset(strTime,0,sizeof(strTime));
+
+    AddTime(strLocalTime,strTime,ii*5*60,"yyyy-mm-dd hh24:mi:ss");
+
+    FileStd.Fprintf("update t_otherobtmind set (r06m,r12m,r30m,r01h,r02h,r03h,r06h,r12h,r24h,r48h,r72h,hdrbz)=(select (select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-5/1440 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))  r06m,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-10/1440 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss')) r12m,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-30/1440 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss')) r30m,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-1/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))    r01h,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-2/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))    r02h,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-3/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))    r03h,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-6/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))    r06h,\n(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-12/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))   r12h,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-24/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))   r24h,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-48/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))   r48h,(select sum(minr) from t_otherobtmind where obtid='45005' and ddatetime>to_date('%s','yyyy-mm-dd hh24:mi:ss')-72/24 and ddatetime<=to_date('%s','yyyy-mm-dd hh24:mi:ss'))   r72h,'111111111111' from t_otherobtmind where obtid='45005' and ddatetime=to_date('%s','yyyy-mm-dd hh24:mi:ss')) where obtid='45005' and ddatetime=to_date('%s','yyyy-mm-dd hh24:mi:ss');\n",strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime,strTime);
+
+    if (strcmp(strTime,"2017-09-02 12:00:00") == 0) break;
+  }
+
+  FileStd.Fprintf("commit;\nexit;\n");
+
+  FileStd.Fclose();
+
+  return 0;
+}

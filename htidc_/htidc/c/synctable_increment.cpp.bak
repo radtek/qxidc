@@ -1,0 +1,465 @@
+#include "idcapp.h"
+/*
+create unique index IDX_allawsdata_log_1 on allawsdata_log (
+   sync_rowid ASC
+);
+
+create unique index IDX_allawsdata_log_2 on allawsdata_log (
+   keyid ASC
+);
+
+*/
+
+connection conn;
+CLogFile   logfile;
+CProgramActive ProgramActive;
+
+void CallQuit(int sig);
+
+int lobfieldcount=0;
+
+// 判断目的表是否存在，如果表不存在，返回失败
+// 判断目的表是否有sync_rowid列，如果没有，返回失败
+// 判断sync_rowid列是否创建了唯一索引，如果没有，返回失败
+BOOL CheckDstTName();
+
+BOOL bContinue;
+// 执行数据同步
+BOOL SyncTable();
+
+char strlogfilename[301];
+char strconnstr[101];
+char strcharset[51];
+char strsrctname[51];
+char strsrcfields[2001];
+char strsrclogtname[51];
+char strdsttname[51];
+char strdstfields[2001];
+int  timetvl;
+char strand[501];
+
+UINT uMaxKeyIDOld;  // 源数据库中，已同步成功的记录的最大keyid
+UINT uMinKeyID;     // 源数据库中，大于uMaxKeyIDOld的最小keyid，如果没有需要同步的记录，uMinKeyID将为0。
+UINT uMaxKeyIDNew;  // 本次同步的记录中，最大的keyid。
+// 从本地数据库的T_SYNCLOG表中获取目的表已同步数据的keyid的位置，结果存放在uMaxKeyIDOld变量中
+BOOL LoadSyncKeyID();
+// 把uMaxKeyIDNew的值更新到T_SYNCLOG表中
+BOOL UpdateSyncKeyID();  
+
+int main(int argc,char *argv[])
+{
+  if (argc != 2)  
+  {
+    printf("Using:/htidc/htidc/bin/synctable_increment xmlbuffer\n");
+    printf("Example:/htidc/htidc/bin/procctl 30 /htidc/htidc/bin/synctable_increment \"<logfilename>/log/sqxj/synctable_increment_T_ALLAWSDATA.log</logfilename><charset>Simplified Chinese_China.ZHS16GBK</charset><connstr>szidc/pwdidc@SZQX_10.153.97.251</connstr><srctname>T_ALLAWSDATA@SZIDC</srctname><srcfields></srcfields><srclogtname>T_ALLAWSDATA@SZIDC</srclogtname><dsttname>T_ALLAWSDATA</dsttname><dstfields></dstfields><timetvl>10</timetvl><and>and ossmocode like '5%%'</and>\"\n\n");
+
+    printf("这是一个工具程序，用于在Oracle数据库之间同步数据，同步的方法是全表刷新或按条件刷新。\n");
+    printf("<logfilename>/log/sqxj/synctable_increment_T_ALLAWSDATA.log</logfilename> 本程序运行的日志文件名。\n");
+    printf("<connstr>szidc/pwdidc@SZQX_10.153.97.251</connstr> 目的数据库的连接参数。\n");
+    printf("<charset>Simplified Chinese_China.ZHS16GBK</charset> 数据库的字符集，必须要与<connstr>"\
+           "参数描述的数据库相同。\n");
+    printf("<srctname>T_ALLAWSDATA@SZIDC</srctname> 数据源表名，在表名后加数据库链路参数，就可以指向远程数据库。\n");
+    printf("<srcfields>cityid,cityname,pubdate,gm</srcfields> 数据源表的字段列表，用于填充在select和from之间，"\
+           "所以，srcfields可以是真实的字段，也可以是任何Oracle的函数或运算。\n");
+    printf("<srclogtname>T_ALLAWSDATA@SZIDC</srclogtname> 数据源表的日志表，该表存放了数据源表"\
+           "的rowid和keyid，日志表由crtsynclogtable程序创建，如果数据源表有keyid字段，该参数可以为空。\n");
+    printf("<dsttname>T_ALLAWSDATA</dsttname> 接收数据的目的表名。\n");
+    printf("<dstfields>cityid,cityname,pubdate,gm</dstfields> 接收数据的目的表的字段列表，与"\
+           "<srcfields>不同，它必须是真实存在的字段。\n");
+    printf("<timetvl>10</timetvl> 执行同步的时间间隔，单位是秒，如果为空，缺省用30。\n");
+    printf("<and>and ossmocode like '5%%'</and> 同步的条件，即select语句where后面的部分，注意，要以and 开头。\n\n");
+
+    printf("注意：\n");
+    printf("  1、<srcfields>和<dstfields>可以为空，如果为空，将以目的表的数据字典中的字段填充。\n");
+    printf("     如果<srcfields>和<dstfields>中只要有一个参数为空，程序将认为两个参数都为空。\n");
+    printf("  2、<charset>可以为空，如果为空，本程序将不会设置字符集环境参数，那么在操作系统环境中必须已\n");
+    printf("     设置正确的NLS_LANG环境变量。\n");
+    printf("  3、<dsttname>参数的目的表必须存在sync_rowid字段，数据类型为rowid，\n");
+    printf("     并且，sync_rowid字段必须是唯一索引。\n");
+    printf("  4、如果<timetvl>不超过50秒，本程序常驻内存，如果超过了50秒，执行完一次同步后将退出。\n\n");
+
+    return -1;
+  }
+
+  memset(strlogfilename,0,sizeof(strlogfilename));
+  memset(strconnstr,0,sizeof(strconnstr));
+  memset(strcharset,0,sizeof(strcharset));
+  memset(strsrctname,0,sizeof(strsrctname));
+  memset(strsrcfields,0,sizeof(strsrcfields));
+  memset(strsrclogtname,0,sizeof(strsrclogtname));
+  memset(strdsttname,0,sizeof(strdsttname));
+  memset(strdstfields,0,sizeof(strdstfields));
+  timetvl=0;
+  memset(strand,0,sizeof(strand));
+
+  GetXMLBuffer(argv[1],"logfilename",strlogfilename,300);
+  GetXMLBuffer(argv[1],"connstr",strconnstr,100);
+  GetXMLBuffer(argv[1],"charset",strcharset,50);
+  GetXMLBuffer(argv[1],"srctname",strsrctname,50);
+  GetXMLBuffer(argv[1],"srcfields",strsrcfields,2000);
+  GetXMLBuffer(argv[1],"srclogtname",strsrclogtname,50);
+  GetXMLBuffer(argv[1],"dsttname",strdsttname,50);
+  GetXMLBuffer(argv[1],"dstfields",strdstfields,2000);
+  GetXMLBuffer(argv[1],"timetvl",&timetvl);
+  GetXMLBuffer(argv[1],"and",strand,500);
+
+  if (strlen(strlogfilename) == 0) { printf("logfilename is null.\n"); return -1; }
+  if (strlen(strconnstr) == 0)     { printf("connstr is null.\n"); return -1; }
+  if (strlen(strcharset) == 0)     { printf("charset is null.\n"); return -1; }
+  if (strlen(strsrctname) == 0)    { printf("srctname is null.\n"); return -1; }
+  // if (strlen(strsrcfields) == 0)   { printf("srcfields is null.\n"); return -1; }
+  // if (strlen(strsrclogtname) == 0)   { printf("srclogtname is null.\n"); return -1; }
+  if (strlen(strdsttname) == 0)    { printf("dsttname is null.\n"); return -1; }
+  // if (strlen(strdstfields) == 0)   { printf("dstfields is null.\n"); return -1; }
+  if (timetvl==0)   timetvl=30;  // 缺省30秒
+  // if (strlen(strand) == 0)       { printf("and is null.\n"); return -1; }
+
+  // 如果数据源表的日志表为空，表示源表有keyid字段，所以把源表名填充日志表名
+  if (strlen(strsrclogtname) == 0) strcpy(strsrclogtname,strsrctname);
+
+  // 如果<srcfields>和<dstfields>中只要有一个参数为空，程序将认为两个参数都为空。
+  if ( (strlen(strsrcfields)==0) || (strlen(strdstfields)==0) )
+  {
+    memset(strsrcfields,0,sizeof(strsrcfields)); memset(strdstfields,0,sizeof(strdstfields));
+  }
+
+  signal(SIGINT,CallQuit); signal(SIGTERM,CallQuit);
+
+  // 打开日志文件
+  if (logfile.Open(strlogfilename,"a+") == FALSE)
+  {
+    printf("logfile.Open(%s) failed.\n",strlogfilename); return -1;
+  }
+
+  //打开告警
+  logfile.SetAlarmOpt("synctable_increment");
+
+  // 注意，程序超时是1200秒
+  ProgramActive.SetProgramInfo(&logfile,"dminingoracle",1200);
+
+  // 如果目的表中有"@"字符，就一定搞错了源表和目的表的关系
+  if (strstr(strdsttname,"@") > 0) 
+  { 
+    logfile.Write("%s表必段是%s连接中指定的数据库的本地表，不允许指向远程数据库的表。\n",\
+                   strdsttname,strconnstr);
+    return -1;
+  }
+
+  // 连接数据库
+  if (conn.connecttodb(strconnstr,TRUE) != 0)
+  {
+    logfile.Write("connect database %s failed.\n",strconnstr); return -1;
+  }
+
+  // 判断目的表是否存在，如果表不存在，返回失败
+  // 判断目的表是否有sync_rowid列，如果没有，返回失败
+  // 判断sync_rowid列是否创建了唯一索引，如果没有，返回失败
+  if (CheckDstTName()==FALSE) CallQuit(-1);
+
+  // 执行数据同步
+  while (TRUE)
+  {
+    ProgramActive.WriteToFile();
+
+    if (SyncTable()==FALSE) CallQuit(-1);
+
+    // 如果这一次没有需要同步的数据，程序休眠timetvl秒
+    if (bContinue==FALSE) 
+    {
+      // 如果最长超过了50秒，干脆退出去算了，本程序没必要呆在内存中，浪费资源
+      if (timetvl>50) break;
+
+      sleep(timetvl);
+    }
+  }
+
+  return 0;
+}
+
+// 判断目的表是否存在，如果表不存在，返回失败
+// 判断目的表是否有sync_rowid列，如果没有，返回失败
+// 判断sync_rowid列是否创建了唯一索引，如果没有，返回失败
+BOOL CheckDstTName()
+{
+  CTABFIELD TABFIELD;
+
+  // 获取该表全部的字段
+  TABFIELD.GetALLField(&conn,strdsttname);
+
+  if (TABFIELD.m_fieldcount==0)
+  {
+    logfile.Write("%s表不存在，请创建它。\n",strdsttname); return FALSE;
+  }
+
+  // 判断目的表是否有sync_rowid列，如果没有，返回失败
+  if (strstr(TABFIELD.m_allfieldstr,"sync_rowid") == 0)
+  {
+    logfile.Write("%s表没有sync_rowid列，请创建它。\n",strdsttname); return FALSE;
+  }
+
+  // 判断sync_rowid列是否创建了唯一索引，如果没有，返回失败
+  char stroutput[51];
+  memset(stroutput,0,sizeof(stroutput));
+  sqlstatement stmt;
+  stmt.connect(&conn);
+  stmt.prepare("select column_name from USER_IND_COLUMNS where table_name=upper(:1) and column_name='SYNC_ROWID'");
+  stmt.bindin(1,strdsttname,50);
+  stmt.bindout(1,stroutput,50);
+  stmt.execute();
+  stmt.next();
+
+  if (strlen(stroutput)==0)
+  {
+    logfile.Write("%s表的sync_rowid列没有创建唯一索引，请创建它。\n",strdsttname); return FALSE;
+  }
+
+  UpdateStr(TABFIELD.m_allfieldstr,",sync_rowid","");
+  UpdateStr(TABFIELD.m_allfieldstr,"sync_rowid,","");
+
+  // <srcfields>和<dstfields>为空，将以目的表的数据字典中的字段填充。
+  if ( (strlen(strsrcfields)==0) && (strlen(strdstfields)==0) )
+  {
+    strcpy(strsrcfields,TABFIELD.m_allfieldstr); strcpy(strdstfields,TABFIELD.m_allfieldstr);
+  }
+
+  // 为strsrcfields加上rowid列，为strdstfields加上sync_rowid列
+  strcat(strsrcfields,",rowid"); strcat(strdstfields,",sync_rowid");
+
+  lobfieldcount=0;
+  // 判断目的表是否有二进制字段，如果有，把字段的个数存放在lobfieldcount变量中
+  stmt.prepare(\
+     "select count(*) from USER_TAB_COLUMNS where table_name=upper(:1) and data_type in ('BLOB','CLOB')");
+  stmt.bindin(1,strdsttname,50);
+  stmt.bindout(1,&lobfieldcount);
+  stmt.execute();
+  stmt.next();
+
+  return TRUE;
+}
+
+void CallQuit(int sig)
+{
+  if (sig > 0) signal(sig,SIG_IGN);
+
+  logfile.Write("catching the signal(%d).\n",sig);
+
+  logfile.Write("synctable_increment exit.\n");
+
+  exit(0);
+}
+
+// 从本地数据库的T_SYNCLOG表中获取目的表已同步数据的keyid的位置
+BOOL LoadSyncKeyID()
+{
+  uMaxKeyIDOld=0;
+
+  sqlstatement stmt;
+  stmt.connect(&conn);
+  stmt.prepare("select keyid from T_SYNCLOG where tname=upper(:1)");
+  stmt.bindin(1,strdsttname,50);
+  stmt.bindout(1,&uMaxKeyIDOld);
+  if (stmt.execute() != 0)
+  {
+    // 如果是T_SYNCLOG表不存在，就不理返回失败，在下面会创建它
+    if (stmt.cda.rc!=942)
+    {
+      logfile.Write("select T_SYNCLOG failed.\n%s\n",stmt.cda.message); return FALSE;
+    }
+
+    // T_SYNCLOG表不存在，就创建它
+    stmt.prepare("create table T_SYNCLOG(tname varchar2(30),keyid number(15),primary key(tname))");
+    stmt.execute();
+  }
+
+  if (stmt.next() != 0) 
+  {
+    stmt.prepare("insert into T_SYNCLOG(tname,keyid) values(upper(:1),0)");
+    stmt.bindin(1,strdsttname,50);
+    if (stmt.execute() != 0)
+    {
+      logfile.Write("insert T_SYNCLOG failed.\n%s\n",stmt.cda.message); return FALSE;
+    }
+
+    conn.commitwork();
+  }
+
+  // 从数据源表的日志表中获取大于uMaxKeyIDOld的最小keyid，并用这个最小的keyid-1取代uMaxKeyIDOld
+  uMinKeyID=0;
+  stmt.prepare("select min(keyid) from %s where keyid>:1",strsrclogtname);
+  stmt.bindin(1,&uMaxKeyIDOld);
+  stmt.bindout(1,&uMinKeyID);
+  if (stmt.execute() != 0)
+  {
+    logfile.Write("select %s failed.\n%s\n",strsrclogtname,stmt.cda.message); return FALSE;
+  }
+
+  stmt.next();
+
+  //logfile.Write("uMaxKeyIDOld=%lu\n",uMaxKeyIDOld);
+  //logfile.Write("uMinKeyID=%lu\n",uMinKeyID);
+  if (uMinKeyID > 0) uMaxKeyIDOld=uMinKeyID-1;
+  //logfile.Write("uMaxKeyIDOld=%lu\n",uMaxKeyIDOld);
+
+  uMaxKeyIDNew=0;
+
+  return TRUE;
+}
+
+BOOL UpdateSyncKeyID()
+{
+  // 更新已同步数据的位置
+  sqlstatement stmt;
+  stmt.connect(&conn);
+  stmt.prepare("update T_SYNCLOG set keyid=:1 where tname=upper(:2)");
+  stmt.bindin(1,&uMaxKeyIDNew);
+  stmt.bindin(2,strdsttname,50);
+  if (stmt.execute() != 0)
+  {
+    logfile.Write("update T_SYNCLOG failed.\n%s\n",stmt.cda.message); return FALSE;
+  }
+
+  //logfile.Write("uMaxKeyIDNew=%lu\n",uMaxKeyIDNew);
+  
+  // 注意，在这里不要提交事务，T_SYNCLOG必须要和数据同步在同一事务中
+  return TRUE;
+}
+
+#define MAXCOUNT 300
+
+// 执行数据同步
+BOOL SyncTable()
+{
+  bContinue=FALSE;
+
+  // 从本地数据库的T_SYNCLOG表中获取目的表已同步数据的keyid的位置
+  if (LoadSyncKeyID() == FALSE) return FALSE;
+
+  if (uMinKeyID==0) return TRUE;
+
+  logfile.Write("copy %s to %s ... ",strsrctname,strdsttname);
+
+  UINT uMaxCount=0;
+  UINT ccount=0;
+  char rowid[31],rowidn[MAXCOUNT][31];
+
+  if (lobfieldcount == 0) uMaxCount=MAXCOUNT;
+  if (lobfieldcount >  0) uMaxCount=1;
+
+  UINT keyidtmp=0;
+  sqlstatement selsrc,delstmt,insstmt;
+
+  selsrc.connect(&conn);
+  if (strcmp(strsrctname,strsrclogtname)==0)
+    //selsrc.prepare("select rowid,keyid from %s where keyid>:1 and keyid<=:1+100000",strsrclogtname);
+    selsrc.prepare("select rowid,keyid from %s where keyid>:1 and keyid<=:1+1000",strsrclogtname);
+  else
+    //selsrc.prepare("select sync_rowid,keyid from %s where keyid>:1 and keyid<=:1+100000",strsrclogtname);
+    selsrc.prepare("select sync_rowid,keyid from %s where keyid>:1 and keyid<=:1+1000",strsrclogtname);
+  selsrc.bindin(1,&uMaxKeyIDOld);
+  selsrc.bindin(2,&uMaxKeyIDOld);
+  selsrc.bindout(1,rowid,30);
+  selsrc.bindout(2,&keyidtmp);
+
+  if (selsrc.execute() != 0)
+  {
+    logfile.WriteEx("failed.\n%s\n%s\n",selsrc.m_sql,selsrc.cda.message); return FALSE;
+  }
+  
+  UINT ii=0;
+  char strtemp[11],strBindStr[4096];
+
+  memset(strBindStr,0,sizeof(strBindStr));
+
+  for (ii=0; ii<uMaxCount; ii++)
+  {
+    memset(strtemp,0,sizeof(strtemp));
+    if (ii==0) sprintf(strtemp,":%lu",ii+1);
+    if (ii >0) sprintf(strtemp,",:%lu",ii+1);
+    strcat(strBindStr,strtemp);
+  }
+
+  insstmt.connect(&conn);
+  /*
+  insstmt.prepare("\
+      insert into %s(%s) select %s from %s where rowid in (%s) %s",\
+          strdsttname,strdstfields,strsrcfields,strsrctname,strBindStr,strand);
+  */
+  insstmt.prepare("\
+    BEGIN\
+      delete from %s where sync_rowid in (%s);\
+      insert into %s(%s) select %s from %s where rowid in (%s) %s;\
+    END;",strdsttname,strBindStr,strdsttname,strdstfields,strsrcfields,strsrctname,strBindStr,strand);\
+  for (ii=0; ii<uMaxCount; ii++)
+  {
+    insstmt.bindin(ii+1, rowidn[ii],30);
+  }
+
+  while (TRUE)
+  {
+    memset(rowid,0,sizeof(rowid));
+
+    if (selsrc.next() != 0) break;
+
+    if (uMaxKeyIDNew<keyidtmp) uMaxKeyIDNew=keyidtmp;
+
+    strncpy(rowidn[ccount],rowid,30);
+
+    ccount++;
+
+    // 每uMaxCount条记录就插入一次
+    if (ccount == uMaxCount)
+    {
+      if (insstmt.execute() != 0)
+      {
+        if ( (insstmt.cda.rc != 1) && (insstmt.cda.rc != 1410) )
+        {
+          logfile.WriteEx("failed.\n%s\n%s\n",insstmt.m_sql,insstmt.cda.message); return FALSE;
+        }
+      }
+
+      ProgramActive.WriteToFile();
+
+      memset(rowidn,0,sizeof(rowidn));
+
+      ccount=0;
+    }
+  }
+
+  // 在以上循环处理的时候，如果不足uMaxCount，就在这里处理
+  for (ii=0; ii<ccount; ii++)
+  {
+    /*
+    insstmt.prepare("\
+        insert into %s(%s) select %s from %s where rowid=:1 %s",strdsttname,strdstfields,strsrcfields,strsrctname,strand);
+    insstmt.bindin(1, rowidn[ii],30);
+    */ 
+    insstmt.prepare("\
+      BEGIN\
+        delete from %s where sync_rowid=:1;\
+        insert into %s(%s) select %s from %s where rowid=:2 %s;\
+      END;",strdsttname,strdsttname,strdstfields,strsrcfields,strsrctname,strand);
+    insstmt.bindin(1, rowidn[ii],30);
+    insstmt.bindin(2, rowidn[ii],30);
+    if (insstmt.execute() != 0)
+    {
+      if ( (insstmt.cda.rc != 1) && (insstmt.cda.rc != 1410) )
+      {
+        logfile.WriteEx("failed.\n%s\n%s\n",insstmt.m_sql,insstmt.cda.message); return FALSE;
+      }
+    }
+  }
+
+  logfile.WriteEx("ok,%lu,rows incrementd.\n",selsrc.cda.rpc);
+
+  if (selsrc.cda.rpc>0) 
+  {
+    if (UpdateSyncKeyID()==FALSE) return FALSE;
+
+    if (selsrc.cda.rpc>10) bContinue=TRUE;
+  }
+
+  conn.commitwork();
+
+  return TRUE;
+}
+

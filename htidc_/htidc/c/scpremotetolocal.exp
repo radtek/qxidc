@@ -1,0 +1,36 @@
+#!/usr/bin/expect
+
+if { $argc != 7 } {
+  send_user "usage: use for scp remotefile to local pfilename\n"
+  send_user "usage: $argv0 ip port username password remotefile localpath pfilename\n"
+  send_user "usage: 本脚本用于scp 远程目录或文件 复制到本地，并以pfilename作前缀按日归档。\n"
+  send_user "usage: $argv0 10.153.97.138 22 oracle oracle /etc/rc.d/rc.local /oracle/data/serverbak/97138 rc.local\n"
+  send_user "usage: $argv0 10.153.97.138 22 oracle oracle /htidc /oracle/data/serverbak/97138 htidc\n"
+  exit
+}
+
+set timeout 7200
+set host [lindex $argv 0]
+set port [lindex $argv 1]
+set username [lindex $argv 2]
+set password [lindex $argv 3]
+set src_file [lindex $argv 4]
+set dest_file [lindex $argv 5]
+set pfilename [lindex $argv 6]
+set datetime [exec date +%Y%m%d]
+
+spawn scp -P $port -r $username@$host:$src_file $dest_file/$pfilename$datetime
+
+expect {
+ "(yes/no)?"
+  {
+  send "yes\n"
+  expect "*assword:" { send "$password\n"}
+  }
+  "*assword:"
+ {
+ send "$password\n"
+  }
+}
+expect "100%"
+expect eof

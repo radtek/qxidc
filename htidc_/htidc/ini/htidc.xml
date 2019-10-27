@@ -1,0 +1,8 @@
+// 数据库连接参数
+<idcconnstr>sqxt/pwdidc</idcconnstr>
+// 日志文件目录
+<logpath>/tmp/htidc/log</logpath>
+// 临时文件目录
+<tmppath>/tmp/htidc/tmp</tmppath>
+// 正式文件目录
+<filestdpath>/tmp/htidc/tmp</filestdpath>

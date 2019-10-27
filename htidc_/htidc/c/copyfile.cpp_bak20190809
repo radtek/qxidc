@@ -1,0 +1,88 @@
+#include "_public.h"
+
+void CallQuit(int sig);
+
+char strSRCFilePath[301];   // 源文件存放的目录
+char strSTDFilePath[301];   // STD文件存放的目录
+
+CLogFile       logfile;
+CIniFile       IniFile;
+CProgramActive ProgramActive;
+CDir           SrcDir;
+
+int main(int argc,char *argv[])
+{
+  if (argc != 6)
+  {
+    printf("\n");
+    printf("Using:./copyfile logfilename srcfilepath dstfilepath second matchfile\n");
+
+    printf("Example:/htidc/htidc/bin/procctl 20 /htidc/szidc/bin/copyfile /log/szqx/copyfile.log /qxdata/szqx/wfile/radorg/GuangZhou /qxdata/szqx/wfile/radafile/GuangZhou 30 *.A\n\n");
+
+    printf("此程序把文件复制到待处理目录用于入库\n");
+    printf("seconde 秒，如果文件的时间在当前时间的前N秒之内，就暂时不处理。\n");
+ 
+    return -1;
+  }
+
+  memset(strSRCFilePath,0,sizeof(strSRCFilePath));
+  memset(strSTDFilePath,0,sizeof(strSTDFilePath));
+
+  strcpy(strSRCFilePath,argv[2]); 
+  strcpy(strSTDFilePath,argv[3]); 
+
+  // 关闭全部的信号和输入输出
+  // 设置信号,在shell状态下可用 "kill + 进程号" 正常终止些进程
+  // 但请不要用 "kill -9 +进程号" 强行终止
+  CloseIOAndSignal(); signal(SIGINT,CallQuit); signal(SIGTERM,CallQuit);
+
+  if (logfile.Open(argv[1],"a+") == FALSE)
+  {
+    printf("logfile.Open(%s) failed.\n",argv[1]); return -1;
+  }
+
+  // 注意，程序超时是300秒
+  ProgramActive.SetProgramInfo(&logfile,"copyfile",300);
+
+  char strLocalTime[20];
+  char strcopy[301];
+
+  if (SrcDir.OpenDir(strSRCFilePath) == FALSE)
+  {
+    logfile.Write("SrcDir.OpenDir %s failed.\n",strSRCFilePath); return -1;
+  }
+
+  while (SrcDir.ReadDir() == TRUE)
+  {
+    ProgramActive.WriteToFile();
+
+    // 如果文件的时间在当前时间的前N秒之内，就暂时不处理。
+    LocalTime(strLocalTime,"yyyy-mm-dd hh24:mi:ss",0-atoi(argv[4]));
+
+    if ( (strcmp(SrcDir.m_ModifyTime,strLocalTime)>0) ) continue;
+
+    if ( (MatchFileName(SrcDir.m_FileName,argv[5])==FALSE) ) continue;
+
+    logfile.Write("copy file %s\n",SrcDir.m_FullFileName);
+
+    memset(strcopy,0,sizeof(strcopy));
+
+    snprintf(strcopy,300,"/bin/cp %s /%s",SrcDir.m_FullFileName,strSTDFilePath);
+
+    system(strcopy);
+
+  }
+
+  return 0;
+}
+
+void CallQuit(int sig)
+{
+  if (sig > 0) signal(sig,SIG_IGN);
+
+  logfile.Write("catching the signal(%d).\n",sig);
+
+  logfile.Write("copyfile exit.\n");
+
+  exit(0);
+}

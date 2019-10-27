@@ -1,0 +1,31 @@
+##################################################################
+# 本参数文件用于设置目录文件数的监控
+# checkdirandalarm.cpp程序读取该参数文件，分析目录下的文件数是否超出阀值
+# 如果超出，将发出短信告警
+# pathname  目录名，注意，采用全路径
+# andchild  是否包括子目录，true-包括，false-不包括
+# alarmcount 目录下文件总数告警阈值
+# mobilenostr 短信告警手机号，用英文状态下的逗号分隔。
+##################################################################
+
+# connstr 短信平台数据库连接参数，dwid 单位代码,ywid 业务代码 clientname 二次接入用户名,sendport 发送端口
+<connstr>hssms/smspwd@hssmszx</connstr><dwid>04</dwid><ywid>92</ywid><clientname>inter_51_52</clientname><sendport>28</sendport>
+
+# 用于监控10.153.96.50的各个入库目录，发现入库堆积。
+<pathname>/qxdata/szqx/sdata/stdszoth</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/std_gdaws</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/std_gdobt</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdgdoth</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdhk</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdhnzhaws</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdls8000</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdszlgt</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/std_tower</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdvip</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdydp</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdyj</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdzdz</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdzh</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+<pathname>/qxdata/szqx/sdata/stdvip</pathname><andchild>FALSE</andchild><alarmcount>50</alarmcount><mobilenostr>15915735161</mobilenostr>
+
+
